@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>FunctionalComponent</title>
+    <script src="react.development.js"></script> 
+    <script src="react-dom.development.js"></script>
+    <script src="babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const {useState,useRef,useCallback,useEffect,useMemo,useImperativeHandle,useContext} = React
+      //函数组件
+
+      let Button = React.memo(function Button(props){
+        let {children,...rest} = props
+        return <button {...rest}>{children}</button>
+      })//React.memo 高阶组件 用于缓存组件 当组件参数没有改变时 避免每次渲染都创建一个新组件
+      
+      function Counter({start = 0}){
+        //useState React Hook 用于在函数组件中添加状态管理 useState会记录每个组件实例的状态和调用顺序
+        const [count,setCount] = React.useState(start)
+        
+        
+        let x = useMemo(()=>{
+          console.log('Calculating x')
+          return count * 2
+        },[count]) //useMemo 用于缓存计算结果 避免每次渲染都重新计算 只有当依赖项改变时才重新计算 类似于vue的计算属性
+
+        useEffect(()=>{
+          console.log('Counter mounted with start=',start)
+          return ()=>{
+            console.log('Counter unmounted with start=',start)
+          }
+        },[]) //useEffect 用于在函数组件中处理副作用 类似类组件的生命周期函数 componentDidMount componentWillUnmount
+
+
+        const inc = useCallback(function inc(){
+          setCount(count => count + 1)
+        },[]) //useCallback 用于缓存函数 避免每次渲染都创建一个新函数 
+        return (
+          <div>
+            <button onClick={inc}>{count}</button> 
+          </div>
+        )
+      }
+
+      function Myinput({expose,...props}){
+        let ref = useRef()
+        // expose.current = {
+        //   focus:()=>{
+        //     ref.current.focus()
+        //   },
+        //   blur:()=>{
+        //     ref.current.blur()
+        //   },
+        //   getValue:()=>{
+        //     return ref.current.value
+        //   }
+        // }
+        useImperativeHandle(expose,()=>{
+          return {
+            focus:()=>{
+              ref.current.focus()
+            },
+            blur:()=>{
+              ref.current.blur()
+            },
+            getValue:()=>{
+              return ref.current.value
+            }
+          }
+        })//useImperativeHandle 用于自定义暴露给父组件的实例值 类似类组件的ref
+
+        let color = useContext(colorContext) //useContext 用于在函数组件中使用上下文 类似类组件的contextType
+        console.log('Myinput color from context:',color)
+        return (
+          <input ref={ref} {...props} />
+        )
+      }
+
+      
+      let colorContext = React.createContext('red') //创建上下文 用于跨组件传递数据 类似vue的provide/inject
+
+
+      function MyApp() {
+        let exposeInput = useRef()
+        useEffect(()=>{
+          console.log('MyApp mounted',exposeInput)
+          exposeInput.current.focus()
+          return ()=>{
+            console.log('MyApp unmounted')
+          }
+        },[])
+        return (
+          <div>
+            <colorContext.Provider value="blue">
+              <Myinput expose={exposeInput} />
+              <Button id="foo">click me</Button>
+              <Counter />
+              <Counter start={1}/>
+            </colorContext.Provider>
+          </div>
+        )
+      }
+
+      const container = document.getElementById('root');
+      const root = ReactDOM.createRoot(container);
+      root.render(<MyApp />);
+    </script>
+    
+  </body>
+</html>

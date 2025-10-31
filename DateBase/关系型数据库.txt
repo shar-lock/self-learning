@@ -3,7 +3,7 @@ sqlite 免费开源 无网络
 
 winpty  ./sqlite3.exe xxx.db 打开文件
 
-create table name ((columnsNames,datatype)...) 创建表
+create table name ((columnsNames,datatype)...); 创建表
 
 insert into xxx value(args) 添加数据
 
@@ -26,7 +26,11 @@ ASC升序 DESC降序
       INSERT 语句
 INSERT INTO table_name(columnsNames..)
 VALUES(valNames...)
-增加列
+增加行的数据
+
+      ALTER 修改表的结构
+ALTER TABLE table_name
+ADD/DROP columnsNames type
 
       NULL 空值
 
@@ -36,7 +40,7 @@ UPDATE table SET columnsNames = valNames (where condition)
 
       DELETE
 DELETE FROM table_name (where condition)
-删除所有行
+删除行
 
       LIKE 数据内容匹配某种模式
       AS: columnsNames AS newNAME 改名
@@ -45,3 +49,16 @@ DELETE FROM table_name (where condition)
       CREATE DATABASE databse_name
       DROP DATABASE databse_name 删除
       BACKUP DATABASE databse_name 备份
+
+175 181 182 183 197 595 596 620 leetcode
+
+      join 表于表的链接
+SELECT columnsNames from table1 join table2 on condition
+
+1、交叉链接 join
+
+inner join 两表的交集
+left join 左边表全保留，拼接上两表交集
+right join 
+full (outer) join 两表的并集
+self join 自己链接

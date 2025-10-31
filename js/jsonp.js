@@ -12,6 +12,8 @@ function jsonp(url,callback){
   }
 }
 
+
+
 function jsonp(url) {
   return new Promise((resolve, reject) => {
     if (typeof url !== 'string' || !url.trim()) {

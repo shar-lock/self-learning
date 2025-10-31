@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="app">
+  
+  </div>
+</body>
+<script src="./vue2.7.16.js"></script>
+<script>
+  //递归组件
+  Vue.component('json-viewer',{
+    props:['data'],
+    template:`
+      <span v-if="typeof data == 'number'">{{data}}</span>
+      <span v-else-if="typeof data == 'string'">{{data}}</span>
+      <span v-else-if="typeof data == 'boolean'">{{data}}</span>
+      <span v-else-if="data == null">null</span>
+      <span v-else-if="Array.isArray(data)">
+        <span @click="open = !open">{{open ? '-' : '+'}}</span>[  
+          <div v-show="open" v-for="prop of data" class="ml-4">
+            <json-viewer  :data="prop"></json-viewer>,
+          </div>
+        ]</span>
+      <span v-else>
+        <span @click="open = !open">{{open ? '-' : '+'}}</span>{
+          <div v-show="open" v-for="(item,key) of data" class="ml-4">
+            {{key}}: <json-viewer  :data="item"></json-viewer>,
+          </div>
+        }</span>
+      `,
+      data(){
+      return {
+        open:true,
+      }
+    }
+  })
+  let app = new Vue({
+    el:'#app',
+    data(){
+      return {
+        
+      }
+    }
+  })
+</script>
+</html>

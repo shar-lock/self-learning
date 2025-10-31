@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>todoMvc</title>
+  <style>
+    #todo{
+      font-size:84px;
+      color:red;
+      text-align:center;
+    }
+    .input{
+      height:50px;
+      width:600px;
+      margin:0 auto;
+    }
+    #input{
+      margin-left: 20%;
+      height:45px;
+      width:90%;
+      margin:0;
+      font-size:1.5em;
+    }
+    ul li{
+      height:30px;
+      width:600px;
+      border: 1px solid gray;
+      margin:0 auto;
+      position: relative;
+    }
+    ul li a{
+      display: none; 
+    }
+    ul li:hover a{
+      display:inline-block;
+      position: absolute;
+      right:5%;
+    }
+    #bottom{
+      display:flex;
+      width:600px;
+      height:20px;
+      text-align:center;
+      border: 1px solid gray;
+      margin:0 auto;
+      font-size:14pX;
+      justify-content:space-between;
+    }
+    #bottom button{
+      background:none;
+      border:none;
+    }
+    button:hover{
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div id="todo">todos</div>
+  <div style="text-align:center">
+    <div class='input'>
+    <input id= 'mainCheckBox' type='checkbox'>
+    <input id="input" type='text' placeholder="What needs to be done?">
+    </div>
+    </div>
+    <main>
+    <ul style="list-style:none; font-size:1em;padding-left:0;margin:0;"> </ul>
+    <div id="bottom">
+    <div class='left'>1 item left!</div>
+    <div class="center"> 
+      <button id="selectAll">All</button> 
+      <button id="selectActive">Active</button> 
+      <button id="selectCompleted">Completed</button></div>
+    <div class="right"><button id="clearCompleted">Clear completed</button></div>
+    </div>
+    </main>
+  <script>
+    let lists = JSON.parse(localStorage.getItem('lists')??'[]')
+    const input = document.querySelector('#input')
+    const ul = document.querySelector('ul')
+    const all = document.querySelector('#mainCheckBox')
+    const selectAll = document.querySelector('#selectAll')
+    const selectActive = document.querySelector('#selectActive')
+    const selectCompleted = document.querySelector('#selectCompleted')
+    const clearCompleted = document.querySelector('#clearCompleted')
+    const main = document.querySelector('main')
+    if(lists.length==0){
+      main.style.display = 'none'
+      all.style.display = 'none'
+    }
+    let text=''
+    drawList(lists)
+    input.addEventListener('input', (e)=>{
+      text = input.value
+    })
+
+    input.addEventListener('keyup',(e)=>{
+      if(text=='') return
+      if(e.key === 'Enter'){
+        input.value = ''
+        addList(createList(text.trim().replace(/ +/g,' ')),lists.length)
+        text = ''
+        itemLeft()
+      }
+    })
+    //check and delete
+    ul.addEventListener('click', (e)=>{
+      if(e.target.tagName=='INPUT'){
+        let num = e.target.dataset.num
+        lists[num-1].finished = e.target.checked
+        let tempList = document.querySelectorAll(`ul li`)[num-1]
+        if(e.target.checked){
+          tempList.style.textDecoration = 'line-through'
+          tempList.style.color = 'gray'
+        }else{
+          tempList.style.textDecoration = 'none'
+          tempList.style.color = 'black'
+        }
+        let flag = true
+         for(let li of lists){
+          if(!li.finished){
+           flag = false
+           break
+         }
+        }
+        all.checked = flag
+      }
+      else if(e.target.tagName=='A'){
+        e.preventDefault()
+        let num = e.target.dataset.num
+        removeList(num)
+        itemLeft()
+        if(lists.length==0){
+          main.style.display = 'none'
+          all.style.display = 'none'
+        }else{
+          let checkboxes = document.querySelectorAll('ul input')
+          let as = document.querySelectorAll('ul a')
+          for(let i = 1;i<=lists.length;i++){
+            checkboxes[i-1].dataset.num = i
+            as[i-1].dataset.num = i
+          }
+        }
+         let flag = true
+         for(let li of lists){
+          if(!li.finished){
+           flag = false
+           break
+         }
+        }
+        all.checked = flag
+      }
+      itemLeft()
+      localStorage.setItem('lists', JSON.stringify(lists))
+    })
+
+  all.addEventListener('click', ()=>{
+    let checkboxes = document.querySelectorAll('ul input')
+    let lis = document.querySelectorAll('ul li')
+    for(const checkbox of checkboxes) checkbox.checked = all.checked
+    for(const list of lists) list.finished = all.checked
+    if(all.checked){
+      for(const li of lis){
+        li.style.textDecoration = 'line-through'
+        li.style.color = 'gray'
+      }
+    }else{
+      for(const li of lis){
+        li.style.textDecoration = 'none'
+        li.style.color = 'black'
+      }
+    }
+      itemLeft()
+      localStorage.setItem('lists',JSON.stringify(lists))
+    })
+    selectAll.addEventListener('click',()=>{
+      ul.innerHTML = ''
+      drawList(lists)
+    })
+    selectCompleted.addEventListener('click',()=>{
+      ul.innerHTML = ''
+      let completedList = lists.filter(it=>it.finished===true)
+      drawList(completedList)
+    })
+    selectActive.addEventListener('click',()=>{
+      ul.innerHTML = ''
+      let acctiveLists = lists.filter(it=>it.finished===false)
+      drawList(acctiveLists)
+    })
+    clearCompleted.addEventListener('click',()=>{
+      ul.innerHTML = ''
+      lists = lists.filter(it=>it.finished===false)
+      if(lists.length==0){
+        main.style.display = 'none'
+        all.style.display = 'none'
+        all.checked = false
+      }
+      localStorage.setItem('lists', JSON.stringify(lists))
+      drawList(lists)
+    })
+
+
+    function drawList(lists){
+      for(let i = 0;i<lists.length;i++) addList(lists[i],i+1)
+      let flag = true
+      for(let li of lists){
+        if(!li.finished){
+        flag = false
+        break
+        }
+      }
+      all.checked = flag
+      itemLeft()
+    }
+    function itemLeft(){
+      let itemsLeft = document.querySelector('#bottom .left')
+      let len = lists.filter(it=>!it.finished).length
+      if(len==1) itemsLeft.innerText = '1 item left!'
+      else itemsLeft.innerText = `${len} items left!`
+    }
+    function removeList(num){
+      let delList = document.querySelectorAll('ul li')[num-1]
+      let text = delList.innerText
+      for(let i = 0;i<lists.length;i++){
+        if(lists[i].things + '\nx'==text){
+          lists.splice(i,1)
+        }
+      }
+      ul.removeChild(delList)
+    }
+    function createList(text){
+      let list = {}
+      list.things = text
+      list.finished = false
+      lists.push(list)
+      localStorage.setItem('lists', JSON.stringify(lists))
+      return list
+    }
+    function addList(list,idx){
+      if(main.style.display == 'none'&&all.style.display == 'none'){
+        main.style.display = ''
+        all.style.display = ''
+      }
+      all.checked = false
+      let li = document.createElement('li')
+      let checkbox = document.createElement('input')
+      let a = document.createElement('a')
+      checkbox.type = 'checkbox'
+      checkbox.dataset.num = idx
+      a.dataset.num = idx
+      a.href = ''
+      a.textContent = 'x'
+      if(list.finished){
+        checkbox.checked = true
+        li.style.textDecoration = 'line-through'
+        li.style.color = 'gray'
+      }
+      li.append(checkbox)
+      li.append(list.things)
+      li.append(a)
+      ul.append(li)
+    }
+    
+  </script>
+</body>
+</html>

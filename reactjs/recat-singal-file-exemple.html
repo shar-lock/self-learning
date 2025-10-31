@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hello World</title>
+    <script src="react.development.js"></script> 
+    <script src="react-dom.development.js"></script>
+    <!-- 为什么要区分React和ReactDOM?
+      React 用于创建和管理react组件,不负责渲染
+      ReactDOM 用于将react组件渲染到页面上
+      其他渲染器:
+      ReactNative 用于将react组件渲染到操作系统原生UI(官方)
+      ReactCanvas 用于将react组件渲染到canvas上(非官方)
+      ReactVR 用于将react组件渲染到虚拟现实(非官方)
+      ReactART 用于将react组件渲染到矢量图形(非官方)
+      ReactFiber 用于将react组件渲染到任何平台(非官方)
+      ReactConsole 用于将react组件渲染到控制台(非官方)
+      ReactSketch 用于将react组件渲染到sketch(非官方)
+      ReactPDF 用于将react组件渲染到pdf(非官方)
+      ReactEmail 用于将react组件渲染到email(非官方)
+    -->
+    <!-- Don't use this in production: -->
+    <script src="babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      
+      function MyApp() {
+        return <div>
+          <Counter />
+          <Counter start ={2} step={1}/>
+          <Counter start ={3} step={3}/>
+        </div>   //JSX return React.CreateElement('h1', null, 'Hello, world!');
+      }
+      
+      //类组件
+      class Counter extends React.Component{
+        //初始化组件
+        constructor(props){
+          super(props) //组件接收的参数
+
+          //组件的内部状态类似vue的data
+          this.state ={
+            count:props.start ?? 0
+          }
+          // this.inc = this.inc.bind(this) 将方法绑定到构造的对象上而不是原型上 --> 1
+        }
+        inc(){
+          this.setState({
+            count:this.state.count + (this.props.step ?? 1)
+          })
+        }
+
+        //约等于在构造函数中声明 -->2
+        dec = () => {
+          this.setState({
+            count:this.state.count - (this.props.step ?? 1)
+          })
+        }
+        //返回组件结构
+        render(){
+         return (
+            <div>
+             <button onClick={ this.dec }>-</button>
+              <span>{ this.state.count }</span>
+              <button onClick={ this.inc.bind(this) }>+</button>
+              // <button onClick={ ()=>this.inc() }>+</button>
+              //1 <button onClick={ this.inc }>+</button>
+           </div>
+          )
+        }
+      }
+     
+      const container = document.getElementById('root');
+      const root = ReactDOM.createRoot(container);
+      root.render(<MyApp />);//root.render(React.createElement(MyApp));
+    </script>
+    
+  </body>
+</html>

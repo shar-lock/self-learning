@@ -7,3 +7,12 @@ block content
     each post in posts
       li  
         a(href="/post/" + post.id)= post.title
+  ul(style="list-style:none;display:flex;gap:1em;")
+    li: a(href="/?page=" + (page - 1)) <
+    - for(let i=1;i<=totalPages;i++)
+      li 
+        if(i==page)
+          span= i 
+        else
+          a(href="/?page="+i)=i
+    li: a(href="/?page=" + (page +1)) >

@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>regexp rail graph</title>
+  <style>
+    header{
+      margin: 0;
+      border: 0;
+      background: linear-gradient(to bottom, #bada55 0%, #8ca440 100%);
+      padding: 1.5em;
+      box-shadow: 0 0 10px #000;
+    }
+    header h1{
+      font-size: 3em;
+      line-height: 1em;
+      font-family: 'Bangers', 'cursive';
+    }
+    body{
+      padding: 0;
+      margin: 0;
+      background-color: #6b6659;
+    }
+    svg{
+      text-align: center;
+      font-size: 1em;
+      background-color: #fff;
+    }
+    #regexp-input {
+      width: 100%;
+      height: 46px;
+      background-color: #cbcbbb;
+    }
+    button{
+      font-size: 1em;
+      width: 100px;
+      line-height: 1.5em;
+      background-color: #bada55;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>REGEXPER</h1>
+  </header>
+  <main style="margin: 20px 20px;">
+    <textarea id="regexp-input" autofocus="autofocus" placeholder="Enter JavaScript-style regular expression to display">foo|(b*\da+r|(b{3}a+z{2,5})[^a\wei0-9ou])|(abc)</textarea>
+    <div style="margin-bottom: 20px;"><button id="display">Display</button></div>
+    <svg width="100%"></svg>
+  </main>
+  <script>
+    let re = /foo|(bar|(ba+z{2,5})[aeiou])/ // | 分支 
+    const svg = document.querySelector('svg')
+    let graphPadding = 10 
+    let display = document.querySelector('#display')
+    let input = document.querySelector('#regexp-input')
+    let reg = input.value
+    input.addEventListener('input',()=>{
+      reg = input.value
+    })
+    display.addEventListener('click',()=>{
+      if(document.querySelector('svg *'))svg.removeChild(document.querySelector('svg *'))
+      let regParseTree = parseRegularExpression(reg)
+      drawRegularExpressionGraph(regParseTree)
+    })
+    function parseRegularExpression(input){
+      let i = 0
+      let groupIndex = 1//分组编号从1开始
+      let branches = parseBranches()
+      return {
+        type:'RegularExpression',
+        start:0,
+        end:i,
+        branches,
+      }
+      
+      function parseOnePart(){
+        if(input[i]=='['){
+          return parseCharacterClass()
+        }
+        if(input[i]=='('){
+          return parseCaptureGroup()
+        }
+        if(input[i]=='?'||input[i]=='*'||input[i]=='+'||input[i]=='?'||input[i]=='{'){
+          return parseQuantity()
+        }
+        if(input[i]=='\\'){
+          return parseEscape()
+        }
+        return parseCharacter()
+      }
+      function parseEscape(){//解析转义符 (暂时只考虑\后接一个字符)
+        let node = {
+          type:'Escape',
+          start:i,
+          end:0,
+          raw:'',
+          escape:'',
+        }
+        i++
+        node.escape = input[i++]
+        node.end = i
+        node.raw = input.slice(node.start,node.end)
+        return node
+      }
+      function parseCharacter(){//解析单字符
+        let node = {
+          type:'Character',
+          start:i,
+          end:0,
+          raw:'',
+          character:input[i],
+        }
+        i++
+        node.end = i
+        node.raw = input.slice(node.start,node.end)
+        return node
+      }
+      function parseCharacterClass(){//解析中括号
+        let node = {
+          type:'CharacterClass',
+          start:i,
+          end:0,
+          raw:'',
+          invert:false,//表示字符集是否取反
+          characterClass:[],
+        }
+        i++//skip [
+        if(input[i]=='^'){
+          node.invert = true
+          i++//skip ^
+        }
+        while(input[i]!==']'){
+          if(input[i]=='-'){
+            let preNode = node.characterClass.pop()
+            i++
+            let nextNode = parseCharacter()
+            node.characterClass.push(parseRange(preNode, nextNode))
+            continue
+          }
+          let part = parseOneClass()
+          node.characterClass.push(part)
+        }
+        i++ //skip ]
+
+        node.end = i
+        node.raw = input.slice(node.start,node.end)
+        return node
+        function parseOneClass(){
+          if(input[i]=='\\'){
+            return parseEscape()
+          }else{
+            return parseCharacter()
+          }
+        }
+        function parseRange(node1,node2){
+          return {
+            type:"Range",
+            startNode:node1,
+            endNode:node2,
+            start:node1.start,
+            end:node2.end,
+            raw:node1.raw + ' - ' + node2.raw
+          }
+        }
+      }
+      function parseQuantity(){//解析量词
+        let node = {
+          type:'Quantity',
+          start:i,
+          end:0,
+          raw:'',
+          min:0,
+          max:Infinity,
+          greedy:true,//贪婪匹配
+          repeatElement:null,
+        }
+        if(input[i]=='?'){
+          node.max = 1
+          i++
+        }else if(input[i]=='+'){
+          node.min = 1
+          i++
+        }else if(input[i]=='*'){
+          i++
+        }else if(input[i]=='{'){
+          i++
+          node.min = parseInteger()
+          if(input[i]=='}'){
+            i++
+            node.max = 0
+          }else{
+            i++//skip ,
+            node.max = parseInteger()
+            i++ //skip }
+          }
+        }
+        if(input[i]=='?'){
+          i++
+          node.greedy = false
+        }
+        node.end = i
+        return node
+      }
+      function parseInteger(){
+        let start = i
+        while(input[i]>='0'&&input[i]<='9'){
+          i++
+        }
+        return Number(input.slice(start,i))
+      }
+      function parseBranches(){//解析分支
+        let branches = []
+        while(input[i]!==')'&&i<input.length){
+          let branch = parseBranch()
+          if(input[i]=='|') i++
+          branches.push(branch)
+        }
+        return branches
+      }
+      function parseBranch(){//解析单个分支 
+        let node = {
+          type:'Branch',
+          start:i,
+          end:0,
+          raw:'',
+          elements:[],
+        }
+        while(input[i]!=='|'&&input[i]!==')'&&i<input.length){
+          let element = parseOnePart()
+          if(element.type=='Quantity'){
+            if(node.elements.length==0){
+              throw new SyntaxError('Quantity: nothing to repeat')
+            }
+            let preElement = node.elements.pop()
+            element.repeatElement = preElement
+            element.start = preElement.start
+            element.raw = input.slice(element.start,element.end)
+          }
+          node.elements.push(element)
+        }
+        node.end = i
+        node.raw = input.slice(node.start,node.end)
+      
+          return node
+      }
+      function parseCaptureGroup(){ //解析捕获分组 ()
+        let node = {
+          type:'CaptureGroup',
+          start:i,
+          end:0,
+          raw:'',
+          groupIndex:groupIndex,//分组的编号
+          capture:true,//是否为捕获分组即不是(?:)
+          zeroAssertion:false,//是否为零宽断言
+          positive:false,//正向还是反向断言
+          lookahead:false,//向右看还是向左看
+          groupName:null,//具名分组的名称
+          branches:[],
+        }
+        i++//skip (
+        if(input[i]=='?'){
+          i++//skip ?
+          if(input[i]==':'){
+            //非捕获分组
+            i++
+            node.capture = false
+          }else if(input[i]=='='){
+            //positive lookahaed
+            i++
+            node.positive = true
+            node.lookahead = true
+            node.zeroAssertion = true
+          }else if(input[i]=='!'){
+            //negative lookahead
+            i++
+            node.positive = false
+            node.lookahead = true
+            node.zeroAssertion = true
+          }else if(input[i]=='<'){
+            //可能是具名分组也可能是lookbehind
+            i++
+            if(input[i]=='='){
+              //positive lookbehind
+              i++
+              node.positive = true
+              node.lookahead = false
+              node.zeroAssertion = true
+            }else if(input[i]=='!'){
+              //negative lookbehind
+              i++
+              node.positive = false
+              node.lookahead = false
+              node.zeroAssertion = true
+            }else{
+              //nameGroup
+              node.groupName = parseGroupName()
+              i++//skip >
+            }
+          }
+        }
+        //解析完了括号自身的属性
+        //不是零宽断言
+        if(!node.zeroAssertion&&node.capture){
+          groupIndex++
+        }else{
+          //否则这个分组不能右编号
+          node.groupIndex = undefined
+        }
+        //后面解析括号内的内容
+        node.branches = parseBranches()
+        i++ //skip )
+        node.end = i
+        node.raw = input.slice(node.start,node.end)
+        return node
+        function parseGroupName(){//解析分组名称
+          let start = i
+          while(input[i]!=='>'){
+            i++
+          }
+          return input.slice(start,i)
+        }
+      }
+    }
+    
+
+    //创建svg元素树
+    function elt(tagName,attrs={},...children){
+      let el = document.createElementNS('http://www.w3.org/2000/svg',tagName)
+      if(attrs){
+        for(let key in attrs){
+          el.setAttribute(key,attrs[key])
+        }
+      }
+      for(let child of  children){
+        if(typeof child == 'string'){
+          child = document.createTextNode(child)
+        }
+        el.appendChild(child)
+      }
+      svg.append(el)
+      return el
+    }
+
+
+    function drawRegularExpressionGraph(reTree){
+      let paint = drawBranchesGraph(reTree.branches)
+      let height = paint.height + 2*graphPadding
+      let width = paint.width + 2*graphPadding
+
+      let g = elt('g')
+      let rect = elt('rect',{
+        width,
+        height,
+        fill:'white'
+      })
+       g.append(rect)
+       let circle1 = elt('circle',{
+        cx:`${graphPadding/2}`,
+        cy:`${height/2}`,
+        r:`${graphPadding/2}`
+       })
+       let circle2 = elt('circle',{
+        cx:`${width - graphPadding/2}`,
+        cy:`${height/2}`,
+        r:`${graphPadding/2}`
+      })
+      paint.g.setAttribute('transform',`translate(${graphPadding},${graphPadding})`)
+      g.append(paint.g)
+      g.append(circle1)
+      g.append(circle2)
+      let bbox = g.getBBox()
+      svg.setAttribute('height',bbox.height) 
+    }
+
+    function drawCharacterGraph(node){
+      let g = elt('g')
+      let text = elt('text',{
+        'alignment-baseline':'text-before-edge',//让文本元素的定位点才其左上角
+        x:graphPadding,
+        y:graphPadding,
+      },'"' + node.character + '"')
+      //宽高
+      let size = text.getBBox()
+      let bg = elt('rect',{
+        fill:'#dae9e5',
+        rx:'3',
+        ry:'3',
+        width: size.width + graphPadding *2,
+        height: size.height + graphPadding*2,
+      })
+      g.append(bg,text)
+      let bbox = g.getBBox()
+      return {
+        g,
+        width:bbox.width,
+        height:bbox.height,
+        raw:node.raw,
+      }
+    }
+    function drawCharacterClassGraph(node){
+      let g = elt('g')
+      //得到字符集中每个字符的图形
+      let charactterGraphs = node.characterClass.map(drawGraph)
+      width = Math.max(...charactterGraphs.map(it=>it.width)) + graphPadding * 2
+      height = charactterGraphs.map(it=>it.height).reduce((a,b)=>a+b) + (graphPadding * (charactterGraphs.length + 1)) 
+      let bg = elt('rect',{
+        fill:'#cbcbbb',
+        rx:'3',
+        ry:'3',
+        width,
+        height,
+      })
+      g.append(bg)
+      //高度
+      let h = graphPadding
+      //g标签没有x，y属性用transFrom来转换距离
+      for(let graph of charactterGraphs){
+        // graph.g.setAttribute('x',(width - graph.width) / 2)
+        // graph.g.setAttribute('y',h)
+        graph.g.setAttribute('transform',`translate(${(width - graph.width) / 2},${h})`)
+        h += graph.height + graphPadding
+        g.append(graph.g)
+      }
+      if(node.invert){
+        let tempg = elt('g')
+        g.setAttribute('transform',`translate(0, ${graphPadding*2})`)
+          let text = elt('text',{
+          'alignment-baseline':'text-before-edge',//让文本元素的定位点才其左上角
+          'font-size':15, 
+        }, 'None of:')
+        let size = text.getBBox()
+        text.setAttribute('x', (width-size.width)/2)
+        tempg.append(text, g)
+        g = tempg
+      }
+      let bbox = g.getBBox()
+      return {
+        g,
+        width:bbox.width,
+        height:bbox.height,
+      }
+    }
+    function drawEscapeGraph(node){
+      let g = elt('g')
+      let character = node.escape.toLowerCase()
+      if(character=='d') character = 'digit'
+      else if(character=='w') character = 'word'
+      else if(character=='s') character = 'white space'
+      else if(character=='b') character = 'word boundary'
+      else if(character=='n') character = 'line feed (0x0A)'
+      else if(character=='t') character = 'tab (0x09)'
+      else if(character=='r') character = 'carriage return (0x0D)'
+      else if(character=='f') character = 'from feed (0x0C)'
+      if(node.escape>='A'&&node.escape<='Z') character = 'non-' + character
+      let text = elt('text', {
+        'alignment-baseline':'text-before-edge',//让文本元素的定位点才其左上角
+        x:graphPadding, 
+        y:graphPadding, 
+      },character)
+      let size = text.getBBox()
+      let bg = elt('rect', {
+        fill:'#bad95b',
+        rx:'3',
+        ry:'3',
+        width: size.width + graphPadding *2, 
+        height: size.height + graphPadding*2, 
+      })
+      g.append(bg,text)
+      let bbox = g.getBBox()
+      return {
+        g, 
+        width:bbox.width, 
+        height:bbox.height,
+        raw:node.raw,
+      }
+    }
+    function drawCaptureGroupGraph(node){
+      let branchesGraph = drawBranchesGraph(node.branches)
+      let text = elt('text',{
+        'alignment-baseline':'text-before-edge',//让文本元素的定位点才其左上角
+        x:0,
+        y:0,
+        'font-size':15 
+      },`group #${node.groupIndex}`)
+      let width = branchesGraph.width + 2*graphPadding
+      let height = branchesGraph.height + 3*graphPadding
+      let g = elt('g')
+      let rect = elt('rect',{
+        width,
+        height,
+        fill:"none"
+      })
+      g.append(rect)
+      let dashedBorder = elt('rect',{
+        width,height,
+        'stroke-dasharray':"4,4",
+        'stroke':"#908c83",
+        'stroke-width':2,
+        rx:3,
+        ry:3,
+        fill:"none",
+      })
+      g.append(dashedBorder)
+      branchesGraph.g.setAttribute('transform',`translate(${graphPadding*1.5},${graphPadding*1.5})`)
+      let paddingline = elt('path',{
+        d:`M 0 ${height/2} L ${graphPadding*1.5} ${height/2}
+           M ${width} ${height/2} L ${width - graphPadding} ${height/2}
+        `,
+        'stroke-width':2,
+        "stroke":'black',
+        fill:"none",
+      })
+      g.append(paddingline)
+      g.append(branchesGraph.g)
+      g.append(text)
+      let bbox = g.getBBox()
+      return {
+        g,
+        width:bbox.width,
+        height:bbox.height,
+      }
+    }
+    function drawBranchGraph(node){
+      //先画出分支中的每个元素的形状
+      let graphs = node.elements.map(drawGraph)
+      let g = elt('g')
+      let height = Math.max(...graphs.map(it=>it.height))
+      let width = graphs.map(it=>it.width).reduce((a,b)=>a+b) + (graphs.length + 1)*graphPadding
+      
+      let rect = elt('rect',{
+        width,
+        height,
+        fill:'white',
+      })
+      g.append(rect)
+      let line = elt('line',{
+        x1:0,
+        y1:height/2,
+        x2:graphPadding,
+        y2:height/2,
+        "stroke-width":2,
+        "stroke":"black",
+      })
+      g.append(line)
+      let x = graphPadding
+      for(let graph of graphs){
+        graph.g.setAttribute('transform',`translate(${x},${(height - graph.height) / 2})`)
+        x+= graphPadding + graph.width
+        let line = elt('line',{
+          x1:x,
+          y1:height/2,
+          x2:x-graphPadding,
+          y2:height/2,
+         "stroke-width":2,
+         "stroke":"black",
+        })
+        g.append(line)
+        g.append(graph.g)
+      }
+      let bbox = g.getBBox()
+      return {
+        g,
+        width:bbox.width,
+        height:bbox.height,
+      }
+    }
+    
+    //该函数接受一个数组作为参数
+    function drawBranchesGraph(nodes){
+      let graphs = nodes.map(drawGraph)
+      let width = Math.max(...graphs.map(it=>it.width)) + graphPadding*4
+      let height = graphs.map(it=>it.height).reduce((a,b)=>a+b) + (graphs.length - 1)*graphPadding
+      let g = elt('g')
+      let rect = elt('rect',{
+        width,
+        height,
+        fill:'white'
+      })
+      g.append(rect)
+      let y = 0
+      for(let graph of graphs){
+        let line = elt('path',{//三阶贝塞尔曲线
+          d:`
+          M 0 ${height/2} 
+          C ${graphPadding} ${height/2} ${graphPadding} ${y + graph.height/2} ${graphPadding*2} ${y + graph.height/2}
+          L ${(width-graph.width)/2} ${y + graph.height/2}
+          M ${width - 0} ${height/2} 
+          C ${width - graphPadding} ${height/2} ${width - graphPadding} ${y + graph.height/2} ${width - graphPadding*2} ${y + graph.height/2}
+          L ${width - (width-graph.width)/2} ${y + graph.height/2}
+          `,
+          stroke:'black',
+          fill:'none',
+          "stroke-width":2,
+        })
+        g.append(line)
+        graph.g.setAttribute('transform',`translate(${(width-graph.width)/2},${y})`)
+        g.append(graph.g)
+        y+= graphPadding + graph.height
+      }
+      let bbox = g.getBBox()
+      return {
+        g,
+        width:bbox.width,
+        height:bbox.height,
+      }
+    }
+
+    function drawQuantityGraph(node){
+      let graph = drawGraph(node.repeatElement)
+      let width = graph.width + 4 * graphPadding
+      let height = graph.height + 2 * graphPadding
+      let rect = elt('rect',{
+        width,
+        height,
+        fill:"none",
+      })
+      let g = elt('g',null,rect)
+
+      graph.g.setAttribute('transform',`translate(${graphPadding*2},${graphPadding})`)
+      g.append(graph.g)
+      if(node.min==0){
+        var upLine = elt('path',{
+          d:`M ${0} ${height/2} a ${graphPadding} ${graphPadding} 0,0,0 ${graphPadding} ${-graphPadding}
+             L ${graphPadding} ${graphPadding} a ${graphPadding} ${graphPadding} 0,0,1 ${graphPadding} ${-graphPadding}
+             L ${width - graphPadding*2} ${0} a ${graphPadding} ${graphPadding} 0,0,1 ${graphPadding} ${graphPadding}
+             L ${width - graphPadding} ${height/2 - graphPadding} a ${graphPadding} ${graphPadding} 0,0,0 ${graphPadding} ${graphPadding}
+             `,
+          stroke:"black",
+          fill:"none",
+           "stroke-width":2,
+        })
+        g.append(upLine)
+      }
+      if(node.max>1||node.max==0&&node.min>1){
+        var downLine = elt('path',{
+          d:`M ${2*graphPadding} ${height/2} a ${graphPadding} ${graphPadding} 0,0,0 ${-graphPadding} ${graphPadding}
+             L ${graphPadding} ${height - graphPadding} a ${graphPadding} ${graphPadding} 0,0,0 ${graphPadding} ${graphPadding}
+             L ${width - graphPadding*2} ${height} a ${graphPadding} ${graphPadding} 0,0,0 ${graphPadding} ${-graphPadding}
+             L ${width - graphPadding} ${height/2 + graphPadding} a ${graphPadding} ${graphPadding} 0,0,0 ${-graphPadding} ${-graphPadding}
+             `,
+          stroke:"black",
+          fill:"none",
+           "stroke-width":2,
+        })
+        let arrow = elt('path',{
+          d:`M ${width-graphPadding} ${height/2 + graphPadding*1.5}
+             L ${width-graphPadding - graphPadding/2} ${height/2 + graphPadding}
+             M ${width-graphPadding} ${height/2 + graphPadding*1.5}
+             L ${width-graphPadding + graphPadding/2} ${height/2 + graphPadding}
+             `,
+          stroke:"black",
+          fill:"none",
+           "stroke-width":2,
+        })
+        g.append(downLine)
+        g.append(arrow)
+      }
+      let bbox = g.getBBox()
+      if(node.max==0&&node.min>1){
+        let tempg = elt('g')
+        let word = node.min
+        if(word=='2') word = 'once'
+        else word = word - 1 +' times'
+        text = elt('text',{
+         'alignment-baseline':'text-before-edge',//让文本元素的定位点才其左上角
+         'font-size':10, 
+         }, word)
+        let size = text.getBBox()
+        let width = bbox.width
+        let height = bbox.height + size.height*2
+        let rect = elt('rect',{
+           width, 
+           height, 
+           fill:"none", 
+        })
+        text.setAttribute('y', height - size.height)
+        tempg.append(rect)
+        g.setAttribute('transform',`translate(0,${size.height})`)
+        text.setAttribute('x',(width-size.width)/2)
+        tempg.append(text,g)
+        g = tempg
+      }
+      else if(node.max!==Infinity&&node.min>0){
+        let tempg = elt('g')
+        let min = node.min
+        let max = node.max
+        let word = ''
+        if(min=='1') word = `at most ${max-1} times`
+        else word = `${min-1}~${max-1} times`
+        text = elt('text',{
+         'alignment-baseline':'text-before-edge',//让文本元素的定位点才其左上角
+         'font-size':10, 
+         }, word)
+        let size = text.getBBox()
+        let width = bbox.width
+        let height = bbox.height + size.height*2
+        let rect = elt('rect',{
+           width, 
+           height, 
+           fill:"none", 
+        })
+        text.setAttribute('y', height - size.height)
+        tempg.append(rect)
+        g.setAttribute('transform',`translate(0,${size.height})`)
+        text.setAttribute('x',(width-size.width)/2)
+        tempg.append(text, g)
+        g = tempg
+      }
+      bbox = g.getBBox()
+      width = bbox.width 
+      height = bbox.height 
+      let line = elt('path',{
+      d: `M 0 ${height/2} L ${graphPadding*2} ${height/2}
+      M ${width-graphPadding*2} ${height/2} L ${width} ${height/2}`,
+      stroke:"black", 
+      fill:"none", 
+      "stroke-width":2, 
+      })
+      g.append(line)
+      return {
+        g,
+        width,
+        height,
+      }
+    }
+    function drawRangeGraph(node){
+      let startGraph = drawCharacterGraph(node.startNode)
+      let endGraph = drawCharacterGraph(node.endNode)
+      let width = startGraph.width + endGraph.width + graphPadding*5
+      let height = Math.max(startGraph.height, endGraph.height) + graphPadding*2
+      let g = elt('g')
+      let rect = elt('rect',{
+        width, 
+        height, 
+        fill:'none'
+      })
+      g.append(rect)
+      let line = elt('path',{
+        d:`
+        M ${startGraph.width+graphPadding*2} ${height/2}
+        L ${startGraph.width+graphPadding*3} ${height/2}`,
+        stroke:"black",
+        fill:"none", 
+        "stroke-width":2, 
+      })
+      startGraph.g.setAttribute('transform',`translate(${graphPadding},${graphPadding})`)
+      endGraph.g.setAttribute('transform', `translate(${graphPadding*4 + startGraph.width}, ${graphPadding})`)
+      g.append(line, startGraph.g, endGraph.g)
+      let bbox = g.getBBox()
+      return {
+        g, 
+        width:bbox.width, 
+        height:bbox.height,
+      }
+    }
+    function drawGraph(node){
+      if(node.type=="Range"){
+        return drawRangeGraph(node)
+      }
+      if(node.type=="Character"){
+        return drawCharacterGraph(node)
+      }
+      if(node.type=="CharacterClass"){
+        return drawCharacterClassGraph(node)
+      }
+      if(node.type=="Quantity"){
+        return drawQuantityGraph(node)
+      }
+      if(node.type=="Escape"){
+        return drawEscapeGraph(node)
+      }
+      if(node.type=="Branch"){
+        return drawBranchGraph(node)
+      }
+      if(node.type=='CaptureGroup'){
+        return drawCaptureGroupGraph(node)
+      }
+    }
+  </script>
+</body>
+</html>

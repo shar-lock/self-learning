@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hello World</title>
+    <script src="react.development.js"></script> 
+    <script src="react-dom.development.js"></script>
+    <script src="babel.min.js"></script>
+    <script src="https://unpkg.com/immer@6.0.3/dist/immer.umd.production.min.js ">//Immer</script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const {useState,useRef,useCallback,useEffect,useMemo,useImperativeHandle,useContext} = React
+      const {produce} = immer 
+
+      function useImmer(init){
+        let [state,setState] = useState(init)
+        let updateState = useCallback((producer) =>{
+            setState(produce(producer))
+        },[])
+        return [state, updateState]
+      }
+
+      function MyApp() {
+        let [todos,setTodos] = useImmer(()=>[
+          {
+            id:1,
+            text:'sleep',
+            completed:false,
+          },
+          {
+            id:2,
+            text:'eat',
+            completed:true,
+          }
+        ])
+        function toggleTodo(idx){
+          setTodos(draft =>{
+            draft[idx].completed = !draft[idx].completed
+          })
+        }
+        function addTodo(e){
+          if(e.key=='Enter'){
+            let text = e.target.value.trim()
+            if(text){
+              setTodos(draft =>{
+                draft.push({
+                  id:Date.now(),
+                  text,
+                  completed:false,
+                })
+              })
+              e.target.value = ''
+            }
+          }
+        }
+        return  (<div>
+          <h1>todo</h1>
+           <div>
+            <input type="checkbox" name="" id="" />
+            <input type="text" onKeyUp={addTodo}/>  
+           </div>
+           <ul>
+            {
+              todos.map((todo,idx) =>{
+                return <li key={todo.id}>
+                  <input type="checkbox" checked={todo.completed} onChange={()=>toggleTodo(idx)}/>
+                  <span>{todo.text}</span>
+                  </li>
+              })
+            }
+            </ul>
+          </div>)
+      }
+
+      const container = document.getElementById('root');
+      const root = ReactDOM.createRoot(container);
+      root.render(<MyApp />);
+    </script>
+    
+  </body>
+</html>

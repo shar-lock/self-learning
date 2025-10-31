@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>hook</title>
+    <script src="react.development.js"></script> 
+    <script src="react-dom.development.js"></script>
+    <script src="babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      let  funcStatesMap = new Map() //记录每个函数的状态由函数映射到状态 {func:[[state,setState],...]}
+      
+      function useState(iniitalState){
+        let currentFunctionState = funcStatesMap.get(currentRunningFunction)
+        let ret 
+        if(currentFunctionState && currentFunctionState[useStateCallIndex]){//之前调用过这个useState
+          ret =  currentFunctionState[useStateCallIndex]
+        }else{//第一次调用这个useState
+          ret = [iniitalState,(newVal)=>{
+            ret[0] = newVal
+          }]
+          currentFunctionState.push(ret)
+        }
+        
+        useStateCallIndex++ //记录当前函数调用的第几个useState
+        return ret
+      }
+      
+      let useStateCallIndex = 0 //记录当前函数调用的第几个useState
+      let currentRunningFunction = null //记录当前正在运行的函数
+
+      function run(f,...args){//只要通过run调用的函数就可以使用useState
+        if(!funcStatesMap.has(f)){//第一次调用这个函数
+          funcStatesMap.set(f,[])
+        }
+        let previousUseStateCallIndex = useStateCallIndex
+        useStateCallIndex = 0
+
+        let previousRunningFunction = currentRunningFunction
+        currentRunningFunction = f
+        try{
+          return currentRunningFunction(...args)
+        }finally{
+          useStateCallIndex = previousUseStateCallIndex
+          currentRunningFunction = previousRunningFunction
+        }
+      }
+      
+      
+      //一个函数记录自己被调用的次数 一个递归函数得知自己的调用深度
+      function foo(){
+        let [count,setCount] = useState(5)
+        run(bar)
+        let [age,setAge] = useState(20)
+        console.log(count,setCount,age,setAge)
+        return 
+      }
+      function bar(){
+        let [name,setName] = useState('zhangsan')
+        console.log(name,setName)
+        return 
+      }
+    </script>
+    
+  </body>
+</html>

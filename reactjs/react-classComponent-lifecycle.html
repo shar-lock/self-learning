@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Hello World</title>
+    <script src="react.development.js"></script> 
+    <script src="react-dom.development.js"></script>
+    <script src="babel.min.js"></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+
+      class Counter extends React.Component{
+        //初始化组件
+        constructor(props){
+          super(props) //组件接收的参数
+
+          //组件的内部状态类似vue的data
+          this.state ={
+            count:props.start ?? 0
+          }
+          // this.inc = this.inc.bind(this) 将方法绑定到构造的对象上而不是原型上 --> 1
+        }
+
+        // static getDerivedStateFromProps(props, state){
+        //   // console.log('getDerivedStateFromProps',props,state)
+        //   return null
+        // } //在render之前调用,在初始化和更新时都会被调用,用于更新state,返回一个对象来更新state,或者返回null表示不更新
+        
+        // componentDidMount(){} //挂载
+        // componentDidUpdate(){} //更新
+        // componentWillUnmount(){} //卸载
+
+
+        shouldComponentUpdate(newProps, newState){
+          console.log('shouleComponentUpdate',newProps,newState)
+          return true
+        } //是否允许组件更新,返回true允许更新,返回false阻止更新
+  
+        getSnapshotBeforeUpdate(prevProps, prevState){
+          console.log('getsnapshotBeforeUpdate',prevProps, prevState)
+          return {a:1}
+        } //在最近一次渲染输出(提交到DOM节点)之前调用,它使组件能在发生更改之前从DOM中捕获一些信息(例如滚动位置)
+
+        componentDidUpdate(prevProps, prevState, snapshot){
+          console.log('componentDidUpdate',prevProps, prevState, snapshot)
+        } //在组件更新后立即调用,首次渲染不会调用
+
+        inc(){
+          this.setState({
+            count:this.state.count + (this.props.step ?? 1)
+          })
+        }
+
+        //约等于在构造函数中声明 -->2
+        dec = () => {
+          this.setState({
+            count:this.state.count - (this.props.step ?? 1)
+          })
+        }
+        //返回组件结构
+        render(){
+          console.log('Counter render')
+         return (
+            <div>
+             <button onClick={ this.dec }>-</button>
+              <span>{ this.state.count }</span>
+              <button onClick={ this.inc.bind(this) }>+</button>
+           </div>
+          )
+        }
+      }
+     
+      class MyApp extends React.Component{
+        state = {
+          i:1,
+        }
+        inc = ()=>{
+          this.setState({
+            i:this.state.i+1
+          })
+        }
+
+        render(){
+         return (
+            <div>
+              {this.state.i}
+              <button onClick={this.inc}>start</button>
+              <Counter />
+            </div>
+          )  
+        }
+      }
+      const container = document.getElementById('root');
+      const root = ReactDOM.createRoot(container);
+      root.render(<MyApp />);
+    </script>
+    
+  </body>
+</html>

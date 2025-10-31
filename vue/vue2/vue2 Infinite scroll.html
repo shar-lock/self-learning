@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="app">
+    <ul v-infinite-sroll="load" style="height: 100px; overflow: auto;">
+      <li v-for="i of count" style="height: 20px;">{{i}}</li>
+    </ul>
+  </div>
+</body>
+<script src="./vue2.7.16.js"></script>
+<script>
+  //自定义指令
+  Vue.directive('infinite-sroll',{
+    inserted(el,binding){
+      el.addEventListener('scroll',e=>{
+        if(el.scrollHeight - el.scrollTop - el.offsetHeight < 20){
+          binding.value()
+        }
+      })
+    },
+  })
+  let app = new Vue({
+    el:'#app',
+    data(){
+      return {
+        count:10,
+      }
+    },
+    methods:{
+      load(){
+        this.count += 5
+      }
+    }
+  })
+</script>
+</html>

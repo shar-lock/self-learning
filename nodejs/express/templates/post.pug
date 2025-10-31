@@ -2,6 +2,16 @@ extends layout.pug
 
 block content 
   h2= post.title 
+  if isLogin && user.name == Postuser.name
+    button.delete-post(data-postid=post.id) 删除该贴
+    script.
+      let btn = document.querySelector('.delete-post')
+      btn.onclick= async (e)=>{
+        await fetch('/post/' + e.target.dataset.postid,{
+          method:'delete',
+        })
+        location.href = '/'
+      }
   h3 by @#{Postuser.name}
   p= post.content 
   hr
@@ -9,17 +19,22 @@ block content
 
   each comment in comments 
     fieldset 
-      span= comment.createdBy + ' @ ' + comment.timeStamp 
-      if user.name == comment.createdBy
+      a(href="/user/" + comment.UserId)= comment.name
+      span=  ' @ ' + comment.createdAt 
+      if user.name == comment.name
         form(style="display:inline;" action="/delete-comment/" + comment.id method="post")
           button 删除
       div= comment.content 
 
 
   hr
-  from(action="/comment" method="post")
-    textarea(name="content")
-    input(name=`postId` value=post.id hidden)
-    button 提交 
+
+  if isLogin
+    form(action="/comment" method="post")
+      textarea(name="content")
+      input(name=`postId` value=post.id hidden)
+      button 提交 
+  else 
+    p 发表评论请先登录
 
 

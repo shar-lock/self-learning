@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+</head>
+<body>
+  <form action="/login" method="post">
+    <div>用户名:</div>
+    <input type="text" name = "name">
+    <div>密码:</div>
+    <input type="password" name = "password">
+    if session.loginFail >= 3
+      <div>验证码:</div>
+      <input type="text" name = "captcha">
+      <div><img src="/captcha" onclick="this.src = '/captcha'"></div>
+    <div><button>登录</button><a href="/forget">忘记密码</a></div>
+  </form>
+</body>
+</html>

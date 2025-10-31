@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+  <div id="app">
+    <slider :imgs="['https://upload-bbs.miyoushe.com/upload/2024/06/08/301537628/d4c31bd0260dac01a76f46ec17883b02_2086495219548920220.png?x-oss-process=image//resize,s_600/quality,q_80/auto-orient,0/interlace,1/format,png',
+    'https://upload-bbs.miyoushe.com/upload/2024/06/08/301537628/1951aeee0d6ad71f5f50f78311e7be19_2151699489444472440.jpg?x-oss-process=image//resize,s_600/quality,q_80/auto-orient,0/interlace,1/format,jpg',
+    'https://upload-bbs.miyoushe.com/upload/2024/06/08/301537628/ea49811a8bad60fa8bc5dbd90d645ee3_7604628207208284499.png?x-oss-process=image//resize,s_600/quality,q_80/auto-orient,0/interlace,1/format,png',
+    'https://upload-bbs.miyoushe.com/upload/2024/06/08/301537628/126a619f6a8631e12a0ffd7f1ccded40_1294954980981811869.png?x-oss-process=image//resize,s_600/quality,q_80/auto-orient,0/interlace,1/format,png'
+    ]"></slider>
+  </div>
+</body>
+<script src="./vue2.7.16.js"></script>
+<script>
+  Vue.component('slider',{
+    props:{
+      imgs:Array,
+    },
+    template:`
+      <div class="border-black">
+        <img :src="imgs[currentIdx]" class="w-full h-full">
+        <button class="absolute  h-4 top-1/2" @click="prev">prev</button>
+        <button class="absolute  h-4 top-1/2 right-0" @click="next">next</button>
+      </div>
+    `,
+    data(){
+      return {
+        currentIdx:0,
+      }
+    },
+    methods:{
+      prev(){
+        if(this.currentIdx==0) this.currentIdx = this.imgs.length - 1
+        else this.currentIdx--
+      },
+      next(){
+        if(this.currentIdx==this.imgs.length - 1) this.currentIdx = 0
+        else this.currentIdx++
+      },
+    }
+  })
+  let app = new Vue({
+    el:'#app',
+  })
+</script>
+</html>

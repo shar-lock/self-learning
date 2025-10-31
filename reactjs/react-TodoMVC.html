@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Todo</title>
+    <script src="react.development.js"></script> 
+    <script src="react-dom.development.js"></script>
+    <script src="babel.min.js"></script>
+    <style>
+      .visible-active .completed{
+        display: none;
+      }
+      .visible-completed .active{
+        display: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      function MyApp() {
+        return  <div>
+         <TodoApp />  
+        </div>
+      }
+      class TodoApp extends React.Component{
+        constructor(){
+          super()
+          this.state ={
+            todos:[{
+              id:'1',
+              text:'sleep',
+              completed:false,
+            },{
+              id:'2',
+              text:'eat',
+              completed:true,
+            }],
+            visibleType : 'all',
+            editingIdx : -1,
+          }
+        }
+        getLeftCount(){
+          return this.state.todos.filter(it=>!it.completed).length
+        }
+        deleteTodo(idx){
+          this.setState({
+            todos:this.state.todos.filter((it,i)=> i!==idx)
+          })
+        }
+        toggleTodo(idx){
+          this.setState({
+            todos: this.state.todos.map((it,i)=>{
+              if(i==idx){
+                return {
+                  ...it,
+                  completed: !it.completed,
+                }
+              }else{
+                return it
+              }
+            })
+          })
+        }
+        isAllCompleted(){
+          return this.state.todos.every(it=>it.completed)
+        }
+        hasCompleted(){
+          return this.state.todos.some(it=>it.completed)
+        }
+        toggleAll = ()=>{
+          let targetCompleted
+          if(this.isAllCompleted()){
+            targetCompleted = false
+          }else{
+            targetCompleted = true
+          }
+          this.setState({
+            todos:this.state.todos.map(it=>{
+              if(it.completed==targetCompleted){
+                return it
+              }else{
+                return {
+                  ...it,
+                  completed:targetCompleted
+                }
+              }
+            })
+          })
+          // this.state.todos.forEach(it=>{
+          //   it.completed = targetCompleted
+          // })
+          // this.forceUpdate()
+        }
+        addTodo = (e)=>{
+          if(e.key == 'Enter'){
+            let text = e.target.value.trim()
+            if(text){
+              let todo = {
+                id:Date.now(),
+                text,
+                completed:false,
+              }
+              this.setState({
+                todos:[...this.state.todos,todo]
+              })
+            }
+            e.target.value = ''
+          }
+        }
+        changeText = (e)=>{
+          if(e.key=='Escape'){
+            this.setState({
+              editingIdx:-1
+            })
+          }else if(e.key=='Enter'){
+            let text = e.target.value.trim()
+            if(text) this.state.todos[this.state.editingIdx].text = text
+            this.state.editingIdx = -1
+            this.forceUpdate()
+          }
+        }
+        clearCompleted = ()=>{
+          this.setState({
+            todos: this.state.todos.filter(it=>!it.completed)
+          })
+        }
+        render(){
+          return (<div>
+              <h1>Todos</h1>
+              <div>
+                <input type="checkbox" checked={ this.isAllCompleted() } onChange={this.toggleAll} />
+                <input type="text" onKeyDown={this.addTodo}/>
+              </div>
+              <ul className={"visible-" + this.state.visibleType}>
+                {
+                  this.state.todos.map((it,idx)=>
+                      <li key={it.id} className={it.completed ? 'completed' : 'active'}>
+                       <input type="checkbox" checked={it.completed} onChange={()=>this.toggleTodo(idx)}/>
+                       
+                       {
+                        this.state.editingIdx == idx
+                        ? <input type="text" autoFocus defaultValue={it.text} onKeyDown={this.changeText} onBlur={()=>this.setState({editingIdx:-1})}/>
+                        : <span onDoubleClick={()=>this.setState({editingIdx:idx})}>{it.text}</span>
+                       }
+                       <button onClick={() => this.deleteTodo(idx)}>x</button>
+                      </li>
+                  )
+                }
+              </ul>
+              <div>
+                <span>{ this.getLeftCount() } items left</span>
+                <div>
+                  <label><input type="radio" name="visiblelType" checked={this.state.visibleType == 'all'} onChange={ ()=>this.setState({visibleType:'all'}) } />all</label> 
+                  <label><input type="radio" name="visiblelType" checked={this.state.visibleType == 'active'} onChange={ ()=>this.setState({visibleType:'active'}) } />active</label> 
+                  <label><input type="radio" name="visiblelType" checked={this.state.visibleType == 'completed'} onChange={ ()=>this.setState({visibleType:'completed'}) } />completed</label>  
+                </div> 
+                {
+                  this.hasCompleted() 
+                  ? <button onClick={this.clearCompleted}>Clear Completed</button>
+                  : ''
+                }
+              </div>
+            </div>
+          )
+        }
+      }
+      const container = document.getElementById('root');
+      const root = ReactDOM.createRoot(container);
+      root.render(<MyApp />);
+    </script>
+    
+  </body>
+</html>

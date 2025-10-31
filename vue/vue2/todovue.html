@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>todoVue</title>
+  <style>
+    ul.show-active li.completed{
+      display: none;
+    }
+    ul.show-completed li.active{
+      display: none;
+    }
+  </style>
+</head>
+<body>
+ <div id="app">
+  <h1>todos</h1>
+  <input type="checkbox" v-show="todos.length > 0" :checked="todos.every(it=>it.completed)" @click="toggleAll()">
+  <input type="text" @keyup="addTodo($event)">
+  <ul :class="`show-${visibleType}`">
+    <li v-for="(todo,i) of todos" :class="todo.completed ? 'completed':'active'">
+      <input type="checkbox" v-model="todo.completed">
+      <input v-if="editingIdx == i" @blur="editingIdx = -1" @keyup.enter="editText($event,todo)" :value="todo.text" type="text" >
+      <span v-else @dblclick="editingIdx = i">{{ todo.text }}</span>
+      <button @click="deleteTodo(i)">x</button>
+    </li>
+  </ul>
+  <div>
+    <span>{{todos.filter(it=>it.completed == false).length}} {{todos.filter(it=>it.completed).length < 2 ? 'item' : 'items'}} left</span>
+    <div>
+      <label><input type="radio" @click="visibleType = 'all'" :checkd="visibleType == 'all'" name="visible-type">All</label>
+      <label><input type="radio" @click="visibleType = 'active'" :checkd="visibleType == 'active'" name="visible-type">Active</label>
+      <label><input type="radio" @click="visibleType = 'completed'" :checkd="visibleType == 'completed'" name="visible-type">Completed</label>
+    </div>
+    <button v-show="todos.some(it=>it.completed)" @click="clearCompleted()">clear completed</button>
+  </div>
+ </div>
+</body>
+<script src="./vue2.7.16.js"></script>
+<script>
+  let app = new Vue({
+    el:'#app',
+    data(){
+      return {
+        todos:[{text:'eat',completed:false},{text:'sleep',completed:true}],
+        visibleType:'all',
+        editingIdx: -1,
+      }
+    },
+    methods:{
+      clearCompleted(){
+        this.todos = this.todos.filter(it => !it.completed)
+      },
+      addTodo(e){
+        if(e.key=='Enter'){
+          let text = e.target.value.trim()
+          if(text){
+            this.todos.push({
+              text,
+              completed:false,
+            })
+            e.target.value = ''
+          }
+        }
+      },
+      deleteTodo(idx){
+        this.todos.splice(idx,1)
+      },
+      toggleAll(){
+        if(this.todos.every(it=>it.completed)){
+          this.todos.forEach(element => {
+            element.completed = false
+          });
+        } else {
+          this.todos.forEach(element => {
+            element.completed = true
+          });
+        }
+      },
+      editText(e,todo){
+        let text = e.target.value.trim()
+        if(text){
+          todo.text = text
+          this.editingIdx = -1
+        }
+      }
+    }
+  })
+</script>
+</html>
