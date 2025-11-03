@@ -1,10 +1,12 @@
 <template>
-  <div class="p-2 ">
-    <h1 class="font-bold mb-2 text-2xl">
-     <RouterLink to="/">
-      < 创建{{ type }}投票
-     </RouterLink >
-    </h1>
+  <NavBar :title="`创建${type}投票`">
+    <template #left>
+      <RouterLink to="/">
+        <Icon name="arrow-left" />返回
+      </RouterLink >
+    </template>
+  </NavBar>
+  <div class="p-2 basis-0 grow flex flex-col">
     <input type="text" v-model="title" class="w-full border-b rouunded outline-none focus:ring my-1 text-2xl" placeholder="请输入投票标题">
     <input type="text" v-model="desc" class="w-full border-b rouunded outline-none focus:ring my-1" placeholder="投票描述（可选）">
     <div v-for="(option,idx) of options" :key="idx" class="flex items-center">
@@ -18,13 +20,20 @@
     <div class="mt-4 divide-y">
       <div class="flex justify-between">
         截止日期
-        <el-date-picker
-          style="width: 160px;"
-          v-model="deadline"
-          type="datetime"
-          format="YYYY-MM-DD HH:mm"
-          placeholder="Select date and time"
-        />
+        <button @click="showPicker = true">{{deadDate.join('-')}} {{ deadTime.join(':') }}</button>
+        <Popup v-model:show="showPicker" position="bottom" >
+            <PickerGroup
+              title="截止日期"
+              :tabs="['选择日期', '选择时间']"
+              @confirm="showPicker = false"
+              @cancel="showPicker = false"
+            >
+            <DatePicker
+                v-model="deadDate"
+              />
+              <TimePicker v-model="deadTime" />
+            </PickerGroup>
+        </Popup>
       </div>
       <div class="flex justify-between">
         匿名投票
@@ -38,6 +47,8 @@
   import { ref,computed} from 'vue'
   import { useRoute,useRouter } from 'vue-router'
   import { useVoteStore } from '@/stores/vote'
+  import { DatePicker , Popup,TimePicker,PickerGroup } from 'vant'
+ import { NavBar,Icon } from 'vant'
   let voteStore = useVoteStore()
   let router = useRouter()
   let route = useRoute()
@@ -45,11 +56,18 @@
   if(voteStore.user.code===-1){
     router.replace(`/login?next=${route.fullPath}`)
   }
+
+  let showPicker = ref(false)
+
   let multiple = type.value === '多选'
   let title = ref('')
   let desc = ref('')
   let options = ref(['',''])
-  let deadline = ref(new Date(Date.now() + 6840000*72)) //默认一周后
+  let deadDate = ref(['2025','12','24']) //默认一周后
+  let deadTime = ref(['12','00'])
+  let deadline = computed(()=>{
+    return new Date(deadDate.join('-') +' '+ deadTime.join(':'))
+  })
   let anonymous = ref(false)
   function addoption(){
     options.value.push('')
