@@ -1,5 +1,5 @@
 <template>
-  <main class="flex flex-col h-screen">
+  <main class="flex flex-col h-dvh">
     <RouterView/>
     <div class="flex h-12">
       <Tabbar router v-model="activeIdx">
@@ -25,7 +25,7 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue';
 import { useVoteStore } from '@/stores/vote';
-import { TabbarItem,Tabbar, NavBarar } from 'vant'
+import { TabbarItem,Tabbar } from 'vant'
 let voteStore = useVoteStore()
 let activeIdx = ref(0)
 </script>
