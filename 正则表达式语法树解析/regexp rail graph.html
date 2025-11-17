@@ -47,7 +47,7 @@
     <h1>REGEXPER</h1>
   </header>
   <main style="margin: 20px 20px;">
-    <textarea id="regexp-input" autofocus="autofocus" placeholder="Enter JavaScript-style regular expression to display">^(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,20}$</textarea>
+    <textarea id="regexp-input" autofocus="autofocus" placeholder="Enter JavaScript-style regular expression to display">^(?=.*[a-z\s\w\d\n\t\r\f])((?=[.*\D\W]{2,9})(?=.*[@$!%*?&]))[A-Za-z\d@$!%*?&]{8,20}$</textarea>
     <div style="margin-bottom: 20px;"><button id="display">Display</button></div>
     <div style="overflow: auto;"><svg width="100%"></svg></div>
   </main>
