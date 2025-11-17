@@ -26,11 +26,13 @@
       text-align: center;
       font-size: 1em;
       background-color: #fff;
+      overflow: auto;
     }
     #regexp-input {
       width: 100%;
       height: 46px;
       background-color: #cbcbbb;
+      
     }
     button{
       font-size: 1em;
@@ -45,14 +47,14 @@
     <h1>REGEXPER</h1>
   </header>
   <main style="margin: 20px 20px;">
-    <textarea id="regexp-input" autofocus="autofocus" placeholder="Enter JavaScript-style regular expression to display">foo|(b*\da+r|(b{3}a+z{2,5})[^a\wei0-9ou])|(abc)</textarea>
+    <textarea id="regexp-input" autofocus="autofocus" placeholder="Enter JavaScript-style regular expression to display">^(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,20}$</textarea>
     <div style="margin-bottom: 20px;"><button id="display">Display</button></div>
-    <svg width="100%"></svg>
+    <div style="overflow: auto;"><svg width="100%"></svg></div>
   </main>
   <script>
     let re = /foo|(bar|(ba+z{2,5})[aeiou])/ // | 分支 
     const svg = document.querySelector('svg')
-    let graphPadding = 10 
+    let graphPadding = 10
     let display = document.querySelector('#display')
     let input = document.querySelector('#regexp-input')
     let reg = input.value
@@ -64,6 +66,8 @@
       let regParseTree = parseRegularExpression(reg)
       drawRegularExpressionGraph(regParseTree)
     })
+
+    //正则表达式解析器
     function parseRegularExpression(input){
       let i = 0
       let groupIndex = 1//分组编号从1开始
@@ -111,6 +115,15 @@
           end:0,
           raw:'',
           character:input[i],
+        }
+        if(input[i]=='^'){
+          node.character = 'Start of line'
+        }
+        if(input[i]=='.'){
+          node.character = 'any character'
+        }
+        if(input[i]=='$'&&i==input.length-1){
+          node.character = 'End of line'
         }
         i++
         node.end = i
@@ -343,7 +356,7 @@
       return el
     }
 
-
+    //绘制正则表达式图形
     function drawRegularExpressionGraph(reTree){
       let paint = drawBranchesGraph(reTree.branches)
       let height = paint.height + 2*graphPadding
@@ -373,7 +386,7 @@
       let bbox = g.getBBox()
       svg.setAttribute('height',bbox.height) 
     }
-
+    //绘制单个字符图形
     function drawCharacterGraph(node){
       let g = elt('g')
       let text = elt('text',{
@@ -399,6 +412,7 @@
         raw:node.raw,
       }
     }
+    //绘制字符集图形
     function drawCharacterClassGraph(node){
       let g = elt('g')
       //得到字符集中每个字符的图形
@@ -442,6 +456,7 @@
         height:bbox.height,
       }
     }
+    //绘制转义字符图形
     function drawEscapeGraph(node){
       let g = elt('g')
       let character = node.escape.toLowerCase()
@@ -476,14 +491,30 @@
         raw:node.raw,
       }
     }
+    //绘制捕获分组图形
     function drawCaptureGroupGraph(node){
       let branchesGraph = drawBranchesGraph(node.branches)
+      let groupType = ''
+      if(node.groupIndex){
+        groupType = `group #${node.groupIndex}`
+      }else{
+        if(node.positive){
+          groupType = 'positive '
+        }else{
+          groupType = 'negative '
+        }
+        if(node.lookahead){
+          groupType += 'lookahead'
+        }else{
+          groupType += 'lookbehind'
+        }
+      }
       let text = elt('text',{
         'alignment-baseline':'text-before-edge',//让文本元素的定位点才其左上角
         x:0,
         y:0,
         'font-size':15 
-      },`group #${node.groupIndex}`)
+      },groupType)
       let width = branchesGraph.width + 2*graphPadding
       let height = branchesGraph.height + 3*graphPadding
       let g = elt('g')
@@ -522,6 +553,7 @@
         height:bbox.height,
       }
     }
+    //绘制分支图形
     function drawBranchGraph(node){
       //先画出分支中的每个元素的形状
       let graphs = node.elements.map(drawGraph)
@@ -607,6 +639,7 @@
       }
     }
 
+    //绘制量词图形
     function drawQuantityGraph(node){
       let graph = drawGraph(node.repeatElement)
       let width = graph.width + 4 * graphPadding
